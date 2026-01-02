@@ -1,0 +1,42 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.env
+.venv/
+venv/
+env/
+ENV/
+
+
+# =========================
+# Secrets / Credentials
+# =========================
+.env
+*.env
+secrets.json
+credentials.json
+
+# =========================
+# Données collectées
+# =========================
+data/
+output/
+*.csv
+*.json
+*.parquet
+
+# =========================
+# Logs
+# =========================
+logs/
+*.log
+
+# =========================
+# OS / Editor
+# =========================
+.vscode/
+Thumbs.db
