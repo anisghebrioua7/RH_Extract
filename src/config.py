@@ -21,6 +21,7 @@ class Config:
     REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", 30))
     DATA_DIR = Path(os.getenv("DATA_DIR", "data"))
     LOG_DIR = Path(os.getenv("LOG_DIR", "logs"))
+    OUTPUT_FORMAT = os.getenv("OUTPUT_FORMAT", "json").lower()
 
 
 def validate_config():

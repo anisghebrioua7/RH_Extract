@@ -1,10 +1,10 @@
-from config import Config, validate_config
+from config import validate_config
+from extract import run_extraction
 
 
 def main():
     validate_config()
-    print("Config OK")
-    print(Config.LUCCA_API_URL)
+    run_extraction()
 
 
 if __name__ == "__main__":
