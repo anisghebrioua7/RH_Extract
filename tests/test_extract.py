@@ -48,7 +48,7 @@ def test_extract_contract_from_user_without_start_date():
 
 def test_contract_status_future():
     """
-    Si dtContractStart est dans le futur → status FUTURE.
+    Si la date de début de contrat est dans le futur, le statut doit être FUTURE.
     """
     future_date = (date.today() + timedelta(days=30)).isoformat()
 
@@ -66,7 +66,7 @@ def test_contract_status_future():
 
 def test_contract_status_ended():
     """
-    Si dtContractEnd est dans le passé → status ENDED.
+    Si dtContractEnd est dans le passé, le statut doit être ENDED
     """
     user = {
         "id": 4,

@@ -1,6 +1,4 @@
-# =========================
 # Python
-# =========================
 __pycache__/
 *.py[cod]
 *.pyo
@@ -12,31 +10,26 @@ env/
 ENV/
 
 
-# =========================
-# Secrets / Credentials
-# =========================
+# Secrets
 .env
 *.env
 secrets.json
 credentials.json
 
-# =========================
+
 # Données collectées
-# =========================
 data/
 output/
 *.csv
 *.json
 *.parquet
 
-# =========================
+
 # Logs
-# =========================
 logs/
 *.log
 
-# =========================
+
 # OS / Editor
-# =========================
 .vscode/
 Thumbs.db

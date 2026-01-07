@@ -9,9 +9,7 @@ from lucca_client import LuccaClient
 from config import Config
 
 
-# =====================================================
-# Utils fichiers
-# =====================================================
+# Les fichiers utiles
 
 def ensure_dir(path: Path) -> None:
     path.mkdir(parents=True, exist_ok=True)
@@ -26,6 +24,7 @@ def write_csv(path: Path, data: List[Dict[str, Any]]) -> None:
     if not data:
         return
 
+    # Construction dynamique des colonnes
     fieldnames = sorted({k for row in data for k in row.keys()})
 
     with open(path, "w", newline="", encoding="utf-8") as f:
@@ -41,7 +40,7 @@ def write_csv(path: Path, data: List[Dict[str, Any]]) -> None:
             }
             writer.writerow(flat_row)
 
-
+#  Écrit les données dans le format configuré (JSON ou CSV)
 def write_output(base_path_no_ext: Path, data: List[Dict[str, Any]]) -> None:
     fmt = getattr(Config, "OUTPUT_FORMAT", "json").lower()
     if fmt == "csv":
@@ -50,9 +49,7 @@ def write_output(base_path_no_ext: Path, data: List[Dict[str, Any]]) -> None:
         write_json(base_path_no_ext.with_suffix(".json"), data)
 
 
-# =====================================================
-# Utils dates
-# =====================================================
+# Convertit une date en objet date
 
 def _parse_iso_date(d: Optional[str]) -> Optional[date]:
     if not d:
@@ -60,9 +57,7 @@ def _parse_iso_date(d: Optional[str]) -> Optional[date]:
     return datetime.fromisoformat(d).date()
 
 
-# =====================================================
-# Extraction USERS (essential)
-# =====================================================
+# Extraction des USERS
 
 def extract_essential_user(user: Dict[str, Any]) -> Dict[str, Any]:
     today = date.today()
@@ -73,6 +68,7 @@ def extract_essential_user(user: Dict[str, Any]) -> Dict[str, Any]:
     start_date = _parse_iso_date(dt_start)
     end_date = _parse_iso_date(dt_end)
 
+    # Détermination du statut contractuel
     if start_date and start_date > today:
         status = "FUTURE"
     elif end_date is None or end_date >= today:
@@ -80,6 +76,7 @@ def extract_essential_user(user: Dict[str, Any]) -> Dict[str, Any]:
     else:
         status = "ENDED"
 
+    # Gestion des variations de nommage API (Id / ID)
     department_id = user.get("departmentId", user.get("departmentID"))
     manager_id = user.get("managerId", user.get("managerID"))
     legal_entity_id = user.get("legalEntityId", user.get("legalEntityID"))
@@ -117,17 +114,10 @@ def extract_essential_user(user: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-# =====================================================
-# Extraction CONTRACTS
-# RÈGLE MÉTIER :
-# Un contrat = un salarié avec dtContractStart
-# =====================================================
+# Extraction CONTRACTS : Un contrat = un salarié avec dtContractStart
 
 def extract_contracts_from_user(user: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """
-    Génère exactement UN contrat par salarié
-    basé uniquement sur dtContractStart / dtContractEnd.
-    """
+
     today = date.today()
     contracts = []
 
@@ -171,9 +161,7 @@ def extract_contracts_from_user(user: Dict[str, Any]) -> List[Dict[str, Any]]:
     return contracts
 
 
-# =====================================================
-# MAIN EXTRACTION
-# =====================================================
+# Orchestration principale
 
 def run_extraction() -> None:
     client = LuccaClient()
@@ -181,14 +169,14 @@ def run_extraction() -> None:
     raw_dir = Path(Config.DATA_DIR) / "raw"
     ensure_dir(raw_dir)
 
-    # 1) IDs utilisateurs
+    # IDs utilisateurs
     user_ids = client.get_all_user_ids()
     print(f"{len(user_ids)} utilisateurs trouvés.")
 
     users_essential: List[Dict[str, Any]] = []
     all_contracts: List[Dict[str, Any]] = []
 
-    # 2) Récupération users détaillés + extraction
+    # Récupération users détaillés + extraction
     for uid in user_ids:
         user_detail = client.get_user_details(uid)
 
@@ -200,18 +188,19 @@ def run_extraction() -> None:
             extract_contracts_from_user(user_detail)
         )
 
-        time.sleep(0.2)  # respect API (~5 req/sec)
+        # Pause pour limiter la charge API
+        time.sleep(0.2) 
 
-    # 3) Departments
+    # Departments
     departments_resp = client.get_departments()
     departments = departments_resp.get("data", {}).get("items", [])
 
-    # 4) Écriture fichiers
+    # Écriture des fichiers
     write_output(raw_dir / "users", users_essential)
     write_output(raw_dir / "contracts", all_contracts)
     write_output(raw_dir / "departments", departments)
 
-    # 5) Logs finaux
+    # Logs finaux
     print("Extraction terminée")
     print(f"- Users       : {len(users_essential)}")
     print(f"- Contracts   : {len(all_contracts)}")

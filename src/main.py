@@ -3,7 +3,9 @@ from extract import run_extraction
 
 
 def main():
-    validate_config()
+    # Valide la configuration
+    # Lance l'extraction complète des données
+    validate_config() 
     run_extraction()
 
 

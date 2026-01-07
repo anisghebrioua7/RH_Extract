@@ -7,10 +7,12 @@ from config import Config
 class LuccaClient:
     def __init__(self):
         self.base_url = Config.LUCCA_API_URL.rstrip("/")
+        # Headers
         self.headers = {
             "Authorization": f"lucca application={Config.LUCCA_API_TOKEN}",
             "Accept": "application/json",
         }
+        # Timeout global pour les requêtes HTTP
         self.timeout = Config.REQUEST_TIMEOUT
 
     def _request(
@@ -29,10 +31,10 @@ class LuccaClient:
             params=params,
             timeout=self.timeout,
         )
-
+        # Certains endpoints peuvent retourner 404
         if response.status_code == 404 and allow_404:
             return {"data": {"items": []}}
-
+        # Toute autre réponse non OK est considérée comme une erreur
         if not response.ok:
             raise RuntimeError(
                 f"Lucca API error {response.status_code} on {url}: {response.text}"
@@ -40,10 +42,9 @@ class LuccaClient:
 
         return response.json()
 
+    # Récupère la liste des utilisateurs avec un sous-ensemble de champs
     def get_employees(self) -> Dict[str, Any]:
-        """
-        Récupère les utilisateurs avec les champs utiles (liste).
-        """
+        
         params = {
             "fields": ",".join([
                 "id",
@@ -58,23 +59,21 @@ class LuccaClient:
             ])
         }
         return self._request("GET", "/api/v3/users", params=params)
-
+    
+    # Récupère l'ensemble des départements
     def get_departments(self) -> Dict[str, Any]:
         return self._request("GET", "/api/v3/departments")
 
-    # =========================
-    # NOUVEAU : stratégie "ids puis détails"
-    # =========================
+    #___Stratégie d'extraction : récupération des IDs puis détails_______
 
+    # Récupère la liste de tous les identifiants utilisateurs
     def get_all_user_ids(self) -> List[int]:
-        """
-        Récupère tous les IDs depuis /users.
-        (Note: si l'API est paginée, il faudra itérer sur les pages.)
-        """
+ 
         resp = self._request("GET", "/api/v3/users")
         items = resp.get("data", {}).get("items", [])
         return [u["id"] for u in items if "id" in u]
 
+    # Récupère les informations détaillées d'un utilisateur à partir de son ID.
     def get_user_details(self, user_id: int, max_retries: int = 5):
         endpoint = f"/api/v3/users/{user_id}"
         url = f"{self.base_url}{endpoint}"
@@ -87,16 +86,19 @@ class LuccaClient:
                     timeout=self.timeout,
                 )
 
+                # retry sur 429 (rate limit)
                 if r.status_code == 429:
                     wait = 2 ** attempt
                     time.sleep(wait)
                     continue
 
+                # retry sur erreurs serveur (>=500)
                 if r.status_code >= 500:
                     wait = 2 ** attempt
                     time.sleep(wait)
                     continue
 
+                # Autres erreurs HTTP
                 if not r.ok:
                     raise RuntimeError(
                         f"Lucca API error {r.status_code} on {url}: {r.text}"
@@ -106,11 +108,12 @@ class LuccaClient:
                 return payload.get("data", payload)
 
             except requests.exceptions.ReadTimeout:
+                # Timeout réseau : retry avec backoff
                 wait = 2 ** attempt
                 time.sleep(wait)
                 continue
 
-        # Après retries → on SKIP l'utilisateur
+        # Après plusieurs échecs, on ignore l'utilisateur pour garantir la continuité du job
         print(f"[WARN] User {user_id} ignoré après {max_retries} tentatives")
         return None
 
